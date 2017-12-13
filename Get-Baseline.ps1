@@ -1,7 +1,6 @@
 function Get-Baseline {
 	<#
 	.SYNOPSIS
-	Test
 	This script is used to get useful baseline information from windows systems in scope.
 	It is designed for the Incident Response scenario. It primarily relies on PowerShell 
 	Remoting and can enable PSRemoting over SMB or WMI if necessary.
