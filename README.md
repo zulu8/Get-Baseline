@@ -4,21 +4,10 @@ Get-Baseline is a wrapper PowerShell script for a number of functions that autom
 
 ## Features
 
-### Remote Access
+#### `Get-Baseline`
 
-**Enable PSRemoting for systems in scope.**
+Primary function. Calls all Remote Access, Baseline Collection, and EventLog Collection functions. 
 
-#### `Enable-RemoteAccess`
-
-Enable PowerShell Remoting / WinRM via SMB (PsExec) or WMI (Invoke-WmiMethod)
-
-#### `Enable-WinRMPsExec`
-
-Enable PowerShell Remoting / WinRM via SMB (PsExec)
-
-#### `Enable-WinRMWMI`
-
-Enable PowerShell Remoting / WinRM via WMI (Invoke-WmiMethod)
 
 ### Baseline Collection
 
@@ -47,6 +36,24 @@ Verifies signature integrity on the system based on Matt Graeber's "Subverting T
 #### `Get-AuditOptions`
 
 Checks registry for additional auditing options - Process Creation Command Line, PowerShell Transcription, PowerShell Script Block Logging, PowerShell Module Logging, Windows Event Forwarding.
+
+
+### Remote Access
+
+**Enable PSRemoting for systems in scope.**
+
+#### `Enable-RemoteAccess`
+
+Enable PowerShell Remoting / WinRM via SMB (PsExec) or WMI (Invoke-WmiMethod)
+
+#### `Enable-WinRMPsExec`
+
+Enable PowerShell Remoting / WinRM via SMB (PsExec)
+
+#### `Enable-WinRMWMI`
+
+Enable PowerShell Remoting / WinRM via WMI (Invoke-WmiMethod)
+
 
 ### Event Log Collection
 
@@ -81,14 +88,184 @@ On Collection System:
 
 
 ## Usage
+### Execution
+```
+PS> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/"
+```
 
 ```
-PS> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/" -SkipSigcheck
+PS> Get-Baseline -Targets $(get-content <IP_list_file.txt>) -url "http://10.0.0.128:8080/" -SkipSigcheck
 ```
 
+### Output
 ```
-PS> Get-Baseline -Targets $(get-content <IP_list_file.txt) -url "http://10.0.0.128:8080/" -SkipSigcheck
+PS C:\Users\Administrator\20171212_Survey> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/" -Verbose
+Transcript started, output file is .\Log_20171212.txt
+
+    Directory: C:\Users\Administrator\20171212_Survey
+
+Mode                LastWriteTime     Length Name
+----                -------------     ------ ----
+d----        12/12/2017   9:25 PM            Baseline
+
+
+If WinRM/PSRemoting is DISABLED, attempt to ENABLE with PsExec? [y/n]: y
+
+If WinRM/PSRemoting and SMB is DISABLED, attempt to ENABLE with WMI? [y/n]: y
+VERBOSE: Testing Remote Management Options for dc01
+VERBOSE: PSRemoting Enabled on dc01
+VERBOSE: Testing Remote Management Options for srv01
+VERBOSE: SMB Enabled on srv01
+VERBOSE: Testing Remote Management Options for srv02
+VERBOSE: WMI Enabled on srv02
+VERBOSE: Testing Remote Management Options for pc02win10
+VERBOSE: PSRemoting Enabled on pc02win10
+
+========================================================================
+Pre-Execution Report
+
+PowerShell Remoting Targets:
+dc01 pc02win10
+
+SMB/PsExec Remoting Targets:
+srv01
+
+WMI Remoting Targets:
+srv02
+
+Targets with NO REMOTING Options:
+
+
+========================================================================
+
+You have elected to enable PSRemoting via PsExec.
+You have elected to enable PSRemoting via WMI.
+
+Are you sure you want to execute? [y/n]: y
+VERBOSE: Executing PsExec...
+VERBOSE: Executing winrm quickconfig -q on srv01 with PsExec
+VERBOSE: Success enabling PSRemoting on srv01 with PsExec
+VERBOSE: Executing WMI...
+VERBOSE: Executing winrm quickconfig -q on srv02 with WMI
+VERBOSE: Success enabling PSRemoting on srv02 with WMI
+
+========================================================================
+Post-Execution Report
+
+PowerShell Remoting Targets:
+dc01 pc02win10
+
+
+SMB/PsExec Remoting Targets SUCCESS enabling PSRemoting:
+srv01
+
+SMB/PsExec Remoting Targets FAILED enabling PSRemoting:
+
+
+
+WMI Remoting Targets SUCCESS enabling PSRemoting:
+srv02
+
+WMI Remoting Targets FAILED enabling PSRemoting:
+
+
+
+Targets with NO REMOTING Options:
+
+
+
+FINAL Targets ready for PSRemoting:
+dc01 pc02win10 srv01 srv02
+========================================================================
+
+Scheduled to execute baseline collection on:
+dc01 pc02win10 srv01 srv02
+
+Are you sure you want to execute? [y/n]: y
+VERBOSE: Getting Audit Levels
+VERBOSE: Getting Additional Audit Options
+VERBOSE: Getting System Information
+VERBOSE: Getting Better Tasklist
+VERBOSE: Getting Loaded DLLs
+VERBOSE: Getting Better TCP Netstat
+VERBOSE: Getting Better TCPv6 Netstat
+VERBOSE: Getting Better UDP Netstat
+VERBOSE: Getting Better UDPv6 Netstat
+VERBOSE: Getting Autorunsc Data
+VERBOSE: Checking System32 and SysWOW64 for unsigned binaries
+VERBOSE: Getting Event Log Settings
+d----        12/12/2017   9:38 PM            EventLogData
+VERBOSE: Collecting Application Log
+VERBOSE: Collecting System Log
+VERBOSE: Collecting Powershell Log
+VERBOSE: Collecting Microsoft-Windows-Windows Defender/Operational
+VERBOSE: Collecting Microsoft-Windows-AppLocker/EXE and DLL
+VERBOSE: Collecting Microsoft-Windows-AppLocker/MSI and Script
+VERBOSE: Collecting Microsoft-Windows-AppLocker/Packaged app-Execution
+VERBOSE: Collecting Microsoft-Windows-DeviceGuard/Operational
+VERBOSE: Collecting Microsoft-Windows-PowerShell/Operational
+VERBOSE: Collecting Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+VERBOSE: Collecting Microsoft-Windows-Sysmon/Operational
+VERBOSE: Collecting Security Log on dc01
+VERBOSE: Collecting Security Log on pc02win10
+VERBOSE: Collecting Security Log on srv01
+VERBOSE: Collecting Security Log on srv02
+Transcript stopped, output file is C:\Users\Administrator\20171212_Survey\Log_20171212.txt
+
+PS C:\Users\Administrator\20171212_Survey>
+
 ```
+### Results
+```
+PS C:\Users\Administrator\20171212_Survey> Get-ChildItem -Recurse
+
+    Directory: C:\Users\Administrator\20171212_Survey
+
+Mode                LastWriteTime     Length Name
+----                -------------     ------ ----
+d----        12/12/2017   9:38 PM            Baseline
+d----        12/12/2017   9:39 PM            EventLogData
+-a---        12/12/2017   9:48 PM      32034 Log_20171212.txt
+-a---        12/12/2017   9:28 PM     339096 PsExec.exe
+
+    Directory: C:\Users\Administrator\20171212_Survey\Baseline
+
+Mode                LastWriteTime     Length Name
+----                -------------     ------ ----
+-a---        12/12/2017   9:31 PM       4140 auditoptions.csv
+-a---        12/12/2017   9:31 PM      34754 auditpol.csv
+-a---        12/12/2017   9:34 PM    2481407 autorunsc.csv
+-a---        12/12/2017   9:31 PM     838746 dlls.csv
+-a---        12/12/2017   9:38 PM       5031 eventloglist.csv
+-a---        12/12/2017   9:32 PM      35431 netstat_TCP.csv
+-a---        12/12/2017   9:32 PM      23498 netstat_TCPv6.csv
+-a---        12/12/2017   9:33 PM     500623 netstat_UDP.csv
+-a---        12/12/2017   9:33 PM       6172 netstat_UDPv6.csv
+-a---        12/12/2017   9:38 PM      36450 sigcheck.csv
+-a---        12/12/2017   9:31 PM       5063 systeminfo.csv
+-a---        12/12/2017   9:31 PM      63379 tasklist.csv
+
+    Directory: C:\Users\Administrator\20171212_Survey\EventLogData
+
+Mode                LastWriteTime     Length Name
+----                -------------     ------ ----
+-a---        12/12/2017   9:39 PM    6861041 eventlog_application.csv
+-a---        12/12/2017   9:39 PM          0 eventlog_applocker_exedll.csv
+-a---        12/12/2017   9:39 PM          0 eventlog_applocker_msiscript.csv
+-a---        12/12/2017   9:39 PM          0 eventlog_applocker_packaged.csv
+-a---        12/12/2017   9:39 PM     282881 eventlog_defender_operational.csv
+-a---        12/12/2017   9:39 PM     108447 eventlog_deviceguard_operational.csv
+-a---        12/12/2017   9:41 PM    1969917 eventlog_firewall.csv
+-a---        12/12/2017   9:39 PM    5775288 eventlog_powershell.csv
+-a---        12/12/2017   9:41 PM    9907825 eventlog_powershell_operational.csv
+-a---        12/12/2017   9:42 PM  119451056 eventlog_security_dc01.csv
+-a---        12/12/2017   9:47 PM  285187744 eventlog_security_pc02win10.csv
+-a---        12/12/2017   9:48 PM  109548498 eventlog_security_srv01.csv
+-a---        12/12/2017   9:48 PM    8306071 eventlog_security_srv02.csv
+-a---        12/12/2017   9:41 PM          0 eventlog_sysmon_operational.csv
+-a---        12/12/2017   9:39 PM    9043921 eventlog_system.csv
+```
+Example Data
 
 
 ## License

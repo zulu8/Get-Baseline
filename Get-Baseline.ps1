@@ -33,7 +33,7 @@ function Get-Baseline {
 	.EXAMPLE
 	PS> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/" -SkipSigcheck
 	.EXAMPLE
-	PS> Get-Baseline -Targets $(get-content <IP_list_file.txt) -url "http://10.0.0.128:8080/" -SkipSigcheck
+	PS> Get-Baseline -Targets $(get-content hostname_list.txt) -url "http://10.0.0.128:8080/" -SkipSigcheck
 	.LINK
 	#>
 	[cmdletbinding()]
