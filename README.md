@@ -2,14 +2,11 @@
 
 Get-Baseline is a wrapper PowerShell script for a number of functions that automates the initial tasks in an incident response scenario. 
 
-## Features
-
 #### `Get-Baseline`
 
 Primary function. Calls all Remote Access, Baseline Collection, and EventLog Collection functions. 
 
-
-### Baseline Collection
+## Baseline Collection
 
 **Collect ASEPs, live process, configuration data for systems in scope.**
 
@@ -38,7 +35,7 @@ Verifies signature integrity on the system based on Matt Graeber's "Subverting T
 Checks registry for additional auditing options - Process Creation Command Line, PowerShell Transcription, PowerShell Script Block Logging, PowerShell Module Logging, Windows Event Forwarding.
 
 
-### Remote Access
+## Remote Access
 
 **Enable PSRemoting for systems in scope.**
 
@@ -55,7 +52,7 @@ Enable PowerShell Remoting / WinRM via SMB (PsExec)
 Enable PowerShell Remoting / WinRM via WMI (Invoke-WmiMethod)
 
 
-### Event Log Collection
+## Event Log Collection
 
 **Collect security-relevant event logs for input into SIEM.**
 
@@ -265,8 +262,30 @@ Mode                LastWriteTime     Length Name
 -a---        12/12/2017   9:41 PM          0 eventlog_sysmon_operational.csv
 -a---        12/12/2017   9:39 PM    9043921 eventlog_system.csv
 ```
-Example Data
-
+### SIEM
+props.conf
+```
+[csv_eventlog]
+DATETIME_CONFIG = 
+INDEXED_EXTRACTIONS = csv
+KV_MODE = none
+NO_BINARY_CHECK = true
+SHOULD_LINEMERGE = false
+TIMESTAMP_FIELDS = TimeGenerated
+category = Structured
+description = Comma-separated value format. Set header and other settings in "Delimited Settings"
+disabled = false
+pulldown_type = true
+REPORT-Message = message_delims
+```
+transforms.conf
+```
+[message_delims]
+SOURCE_KEY = Message
+DELIMS = "\n", "=:"
+CLEAN_KEYS = true
+MV_ADD     = true
+```
 
 ## License
 
