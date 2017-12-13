@@ -48,7 +48,7 @@ Verifies signature integrity on the system based on Matt Graeber's "Subverting T
 
 Checks registry for additional auditing options - Process Creation Command Line, PowerShell Transcription, PowerShell Script Block Logging, PowerShell Module Logging, Windows Event Forwarding.
 
-## Event Log Collection
+### Event Log Collection
 
 **Collect security-relevant event logs for input into SIEM.**
 
