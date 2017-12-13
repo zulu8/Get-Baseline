@@ -49,7 +49,7 @@ function Get-Baseline {
 	[Switch]$SkipAuditConfig,
 	[Switch]$SkipEventLogSettings,
 	[Switch]$SkipRemoteEnable,
-	[Switch]$SkipEventLog)
+	[Switch]$SkipEventLogData)
 	
 	$VerbosePreference = "Continue"
 	
@@ -148,7 +148,7 @@ function Get-Baseline {
 		} | Export-Csv ./Baseline/eventloglist.csv -NoTypeInformation
 	}
 	
-	if (-Not $SkipEventLog) {	
+	if (-Not $SkipEventLogData) {	
 		Get-HuntData -Targets $PSTargets
 	} 
 	
@@ -174,13 +174,12 @@ function Get-HuntData {
 	String[]: Comma separated list of hostnames to execute script on.
 	Can also be $(get-content <IP_list_file.txt)
 	.EXAMPLE
-	PS> Get-Baseline -Targets pc01win7
+	PS> Get-HuntData -Targets pc01win7
 	.LINK
 	#>
 	[cmdletbinding()]
 	Param([String[]]$Targets)
 	
-	#Requires -Version 3.5
 	$VerbosePreference = "Continue"
 
 	New-Item ./EventLogData -type directory -force
