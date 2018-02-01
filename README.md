@@ -267,25 +267,19 @@ Mode                LastWriteTime     Length Name
 ## Signature Based Analysis
 **Applying IOCs (filename,hash,c2,etc) to the data set in a given SIEM (Splunk)**
 
-### Getting IOCs
-#### Florian Roth's IOC lists
-https://github.com/Neo23x0/signature-base
+### Get IOCs
 
-#### OTX's IOC lists
-* Get an otx key
-python get-otx-iocs.py -o ~/signature-base/ --siem
-
-### Fixing the IOCs
+### Fixing IOCs
 
 * Substitute double backslash for single - sed (splunk-ism)
 * Substitute semi-colon for comma - tr (turn into csv. splunk-ism)
 * Add * to beginning and end of string - awk (for wildcard matching and command line comparison)
 ```
-grep -v '#' /usr/share/signature-base/iocs/otx-filename-iocs.txt | sed '/^\s*$/d' | tr ";" "," | sed 's/\\\\/\\/g' | sed 's/\\\./\./g' | awk '{ print "\*" $0; }' | awk -F',' '{print $1,$2}' OFS='*,' > /root/Documents/signature-base/neo-otc-filename-iocs.csv
+grep -v '#' filename-iocs.txt | sed '/^\s*$/d' | tr ";" "," | sed 's/\\\\/\\/g' | sed 's/\\\./\./g' | awk '{ print "\*" $0; }' | awk -F',' '{print $1,$2}' OFS='*,' > ~/filename-iocs.csv
 
-grep -v '#' /usr/share/signature-base/iocs/otx-c2-iocs.txt | sed '/^\s*$/d' | tr ";" "," > /root/Documents/signature-base/neo-otx-c2-iocs.txt
+grep -v '#' c2-iocs.txt | sed '/^\s*$/d' | tr ";" "," > ~/c2-iocs.txt
 
-grep -v '#' /usr/share/signature-base/iocs/otx-hash-iocs.txt | sed '/^\s*$/d' | tr ";" "," > /root/Documents/signature-base/neo-otx-hash-iocs.txt
+grep -v '#' hash-iocs.txt | sed '/^\s*$/d' | tr ";" "," > ~/hash-iocs.txt
 ```
 
 * Single File
@@ -305,15 +299,15 @@ cat uniq-all-filename-iocs.csv | awk -F',' '$2 != "" {print $0}' >> fixed-filena
 ```
 
 * Identify CSV headers to be used in splunk queries
-uniq-all-c2-iocs.csv -> host,source
-uniq-all-filename-iocs.csv -> filename,description
-uniq-all-hash-iocs.csv -> hash,source
+**uniq-all-c2-iocs.csv -> host,source**
+**uniq-all-filename-iocs.csv -> filename,description**
+**uniq-all-hash-iocs.csv -> hash,source**
 
 ### Configure SIEM (Splunk)
-**IOCs gathered and prepared. Now we prepare our environment**
+*IOCs gathered and prepared. Now we prepare our environment*
 
 #### Prepare for Data Ingest and Field Extraction
-**These configs allow us to (automatically) extract the fields we need from CSV data acquired with PowerShell remoting**
+*These configs allow us to (automatically) extract the fields we need from CSV data acquired with PowerShell remoting*
 
 $SPLUNK_HOME\\etc\\system\\local\\props.conf
 ```
@@ -340,17 +334,17 @@ MV_ADD     = true
 ```
 
 ### Prepare our Lookups 
-**These configs allow us to reference our CSV IOC lists and apply WILDCARD and CASE(in)sensitive matching**
+*These configs allow us to reference our CSV IOC lists and apply WILDCARD and CASE(in)sensitive matching*
 
 ##### Move CSV File to:
 $SPLUNK_HOME\\etc\\apps\\search\\lookups\\
 
 ##### In WebApp add CSVs as "lookup" files
-(Settings > Lookups > Lookup definitions > Add new)
-search
-<name>
-File-based
-<file>
+* Settings > Lookups > Lookup definitions > Add new
+* search
+* <name>
+* File-based
+* <file>
 
 ##### Implement Wildcard Matching
 $SPLUNK_HOME\\etc\\users\\<admin>\\search\\local\\transforms.conf
@@ -375,26 +369,27 @@ filename,description
 ```
 * Splunk Query:
 ```
-		source="C:\\20171215_Survey\\Baseline*" 
-		| lookup filename-iocs filename AS ExecutablePath OUTPUT description AS threat_description 
-		| search threat_description=*
+source="C:\\20171215_Survey\\Baseline*" 
+| lookup filename-iocs filename AS ExecutablePath OUTPUT description AS threat_description 
+| search threat_description=*
 ```
 * Results: any events that contain the field "ExecutablePath" with a value that matches the list of wildcards in filename-iocs.csv
-```
-		"TimeGenerated"	"Fri, 15 Dec 2017 18:06:15 GMT"
-		"Protocol"		"UDP"
-		"LocalAddress"		"[::]:4500"
-		"Name"			"svchost.exe"
-		"ProcessId"		"844"
-		"ParentProcessId"	"468"
-		"ExecutablePath"	"C:\Windows\system32\svchost.exe"
-		"Hash"			"619652B42AFE5FB0E3719D7AEDA7A5494AB193E8"
-		"CommandLine"		"C:\Windows\system32\svchost.exe -k netsvcs"
-		"PSComputerName"	"srv03"
-		"RunspaceId"		"286f61af-dff7-4dc4-9fe5-71e6aedcfad0"
-		"PSShowComputerName""True"
-		...
-```
+| Field | Value |
+| --- | --- |
+| "TimeGenerated" | "Fri, 15 Dec 2017 18:06:15 GMT" |
+| "Protocol" | "UDP" |
+| "LocalAddress" | "[::]:4500" |
+| "Name" | "svchost.exe" |
+| "ProcessId" | "844" |
+| "ParentProcessId" | "468" |
+| "ExecutablePath" | "C:\Windows\system32\svchost.exe" |
+| "Hash" | "619652B42AFE5FB0E3719D7AEDA7A5494AB193E8" |
+| "CommandLine" | "C:\Windows\system32\svchost.exe -k netsvcs" |
+| "PSComputerName" | "srv03" |
+| "RunspaceId" | "286f61af-dff7-4dc4-9fe5-71e6aedcfad0" |
+| "PSShowComputerName" | "True" |
+...
+
 
 ## License
 
