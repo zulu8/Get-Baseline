@@ -8,7 +8,7 @@ Primary function. Calls all Remote Access, Baseline Collection, and EventLog Col
 
 ## Baseline Collection
 
-**Collect ASEPs, live process, configuration data for systems in scope.**
+*Collect ASEPs, live process, configuration data for systems in scope.*
 
 #### `Get-BetterTasklist`
 
@@ -37,7 +37,7 @@ Checks registry for additional auditing options - Process Creation Command Line,
 
 ## Remote Access
 
-**Enable PSRemoting for systems in scope.**
+*Enable PSRemoting for systems in scope.*
 
 #### `Enable-RemoteAccess`
 
@@ -54,7 +54,7 @@ Enable PowerShell Remoting / WinRM via WMI (Invoke-WmiMethod)
 
 ## Event Log Collection
 
-**Collect security-relevant event logs for input into SIEM.**
+*Collect security-relevant event logs for input into SIEM.*
 
 #### `Get-HuntData`
 
@@ -265,7 +265,7 @@ Mode                LastWriteTime     Length Name
 
 # Analysis
 ## Signature Based Analysis
-**Applying IOCs (filename,hash,c2,etc) to the data set in a given SIEM (Splunk)**
+*Applying IOCs (filename,hash,c2,etc) to the data set in a given SIEM (Splunk)*
 
 ### Get IOCs
 
@@ -374,8 +374,9 @@ source="C:\\20171215_Survey\\Baseline*"
 | search threat_description=*
 ```
 * Results: any events that contain the field "ExecutablePath" with a value that matches the list of wildcards in filename-iocs.csv
+
 | Field | Value |
-| --- | --- |
+| ----- | ----- |
 | "TimeGenerated" | "Fri, 15 Dec 2017 18:06:15 GMT" |
 | "Protocol" | "UDP" |
 | "LocalAddress" | "[::]:4500" |
@@ -388,7 +389,7 @@ source="C:\\20171215_Survey\\Baseline*"
 | "PSComputerName" | "srv03" |
 | "RunspaceId" | "286f61af-dff7-4dc4-9fe5-71e6aedcfad0" |
 | "PSShowComputerName" | "True" |
-...
+
 
 
 ## License
