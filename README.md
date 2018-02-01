@@ -86,16 +86,16 @@ On Collection System:
 
 ## Usage
 ### Execution
-```
+```PowerShell
 PS> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/"
 ```
 
-```
+```PowerShell
 PS> Get-Baseline -Targets $(get-content <IP_list_file.txt>) -url "http://10.0.0.128:8080/" -SkipSigcheck
 ```
 
 ### Output
-```
+```PowerShell
 PS C:\Users\Administrator\20171212_Survey> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/" -Verbose
 Transcript started, output file is .\Log_20171212.txt
 
@@ -213,7 +213,7 @@ PS C:\Users\Administrator\20171212_Survey>
 
 ```
 ### Results
-```
+```PowerShell
 PS C:\Users\Administrator\20171212_Survey> Get-ChildItem -Recurse
 
     Directory: C:\Users\Administrator\20171212_Survey
@@ -274,7 +274,7 @@ Mode                LastWriteTime     Length Name
 * Substitute double backslash for single - sed (splunk-ism)
 * Substitute semi-colon for comma - tr (turn into csv. splunk-ism)
 * Add * to beginning and end of string - awk (for wildcard matching and command line comparison)
-```
+```bash
 grep -v '#' filename-iocs.txt | sed '/^\s*$/d' | tr ";" "," | sed 's/\\\\/\\/g' | sed 's/\\\./\./g' | awk '{ print "\*" $0; }' | awk -F',' '{print $1,$2}' OFS='*,' > ~/filename-iocs.csv
 
 grep -v '#' c2-iocs.txt | sed '/^\s*$/d' | tr ";" "," > ~/c2-iocs.txt
@@ -284,12 +284,12 @@ grep -v '#' hash-iocs.txt | sed '/^\s*$/d' | tr ";" "," > ~/hash-iocs.txt
 
 * Single File
 * Unique Entries Only (save computing power. no need to check same hash/c2/filename twice)
-```
+```bash
 cat all-filename-iocs.csv | sort -t"," -k1 | uniq | wc -l
 ```
 
 * Find and remediate any entries without description or source field (required for splunk query design)
-```
+```bash
 cat uniq-all-hash-iocs.csv | awk -F',' '$2 == "" {print $0}'
 cat uniq-all-c2-iocs.csv | awk -F',' '$2 == "" {print $0}'
 cat uniq-all-c2-iocs.csv | awk -F',' '$2 == "" {print $0}'
@@ -299,10 +299,11 @@ cat uniq-all-filename-iocs.csv | awk -F',' '$2 != "" {print $0}' >> fixed-filena
 ```
 
 * Identify CSV headers to be used in splunk queries
-**uniq-all-c2-iocs.csv -> host,source**
-**uniq-all-filename-iocs.csv -> filename,description**
-**uniq-all-hash-iocs.csv -> hash,source**
-
+```
+uniq-all-c2-iocs.csv -> host,source
+uniq-all-filename-iocs.csv -> filename,description
+uniq-all-hash-iocs.csv -> hash,source
+```
 ### Configure SIEM (Splunk)
 *IOCs gathered and prepared. Now we prepare our environment*
 
@@ -333,32 +334,34 @@ CLEAN_KEYS = true
 MV_ADD     = true
 ```
 
-### Prepare our Lookups 
+### Prepare Lookups 
 *These configs allow us to reference our CSV IOC lists and apply WILDCARD and CASE(in)sensitive matching*
 
 ##### Move CSV File to:
 $SPLUNK_HOME\\etc\\apps\\search\\lookups\\
 
 ##### In WebApp add CSVs as "lookup" files
-* Settings > Lookups > Lookup definitions > Add new
-* search
-* <name>
-* File-based
-* <file>
+```
+Settings > Lookups > Lookup definitions > Add new
+search
+<name>
+File-based
+<file>
+```
 
 ##### Implement Wildcard Matching
 $SPLUNK_HOME\\etc\\users\\<admin>\\search\\local\\transforms.conf
 ```
-	[filename-iocs]
-	batch_index_query = 0
-	case_sensitive_match = 0				<---- Change from 1 to 0
-	filename = filename-iocs.csv
-	match_type = WILDCARD(filename)		<---- Add this line
+[filename-iocs]
+batch_index_query = 0
+case_sensitive_match = 0			<---- Change from 1 to 0
+filename = filename-iocs.csv
+match_type = WILDCARD(filename)		<---- Add this line
 
-	[hash-iocs]
-	batch_index_query = 0
-	case_sensitive_match = 1
-	filename = hash-iocs.csv
+[hash-iocs]
+batch_index_query = 0
+case_sensitive_match = 1
+filename = hash-iocs.csv
 ```
 Example:
 * filename-iocs.csv contains:
