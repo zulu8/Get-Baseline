@@ -31,7 +31,9 @@ function Get-Baseline {
 	.PARAMETER url
 	String: Provide the URL of the Sysinternals Suite http server.
 	.EXAMPLE
-	PS> Get-Baseline -Targets dc01,srv01,srv02,pc02win10 -url "http://10.0.0.128:8080/" -SkipSigcheck
+	PS> Get-Baseline -Targets dc01,srv01,pc02win10 -url "http://10.0.0.133:8080/" -SkipSigcheck
+	PS> Get-Baseline -Targets dc01 -url "http://10.0.0.133:8080/" -SkipSigcheck
+
 	.EXAMPLE
 	PS> Get-Baseline -Targets $(get-content hostname_list.txt) -url "http://10.0.0.128:8080/" -SkipSigcheck
 	.LINK
@@ -184,44 +186,46 @@ function Get-HuntData {
 
 	New-Item ./EventLogData -type directory -force
 	
-	Write-Verbose "Collecting Application Log"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-EventLog -LogName "Application"} | Export-Csv ./EventLogData/eventlog_application.csv -NoTypeInformation
-
-	Write-Verbose "Collecting System Log"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-EventLog -LogName "System"} | Export-Csv ./EventLogData/eventlog_system.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Powershell Log"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-EventLog -LogName "Windows PowerShell"} | Export-Csv ./EventLogData/eventlog_powershell.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Microsoft-Windows-Windows Defender/Operational"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational'} | Export-Csv ./EventLogData/eventlog_defender_operational.csv -NoTypeInformation
-	
-	Write-Verbose "Collecting Microsoft-Windows-AppLocker/EXE and DLL"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/EXE and DLL'} | Export-Csv ./EventLogData/eventlog_applocker_exedll.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Microsoft-Windows-AppLocker/MSI and Script"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/MSI and Script'} | Export-Csv ./EventLogData/eventlog_applocker_msiscript.csv -NoTypeInformation
-	
-	Write-Verbose "Collecting Microsoft-Windows-AppLocker/Packaged app-Execution"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/Packaged app-Execution'} | Export-Csv ./EventLogData/eventlog_applocker_packaged.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Microsoft-Windows-DeviceGuard/Operational"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-DeviceGuard/Operational'} | Export-Csv ./EventLogData/eventlog_deviceguard_operational.csv -NoTypeInformation
-	
-	Write-Verbose "Collecting Microsoft-Windows-PowerShell/Operational"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-PowerShell/Operational'} | Export-Csv ./EventLogData/eventlog_powershell_operational.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Microsoft-Windows-Windows Firewall With Advanced Security/Firewall"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall'} | Export-Csv ./EventLogData/eventlog_firewall.csv -NoTypeInformation
-
-	Write-Verbose "Collecting Microsoft-Windows-Sysmon/Operational"
-	Invoke-Command -ComputerName $Targets -ScriptBlock {Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"} | Export-Csv ./EventLogData/eventlog_sysmon_operational.csv -NoTypeInformation
-	
 	foreach ($i in $Targets) {
-		Write-Verbose "Collecting Security Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Security"} | Export-Csv ./EventLogData/eventlog_security_$i`.csv -NoTypeInformation
-	}
+		
+		New-Item ./EventLogData/$i -type directory -force
+		
+		Write-Verbose "Collecting Application Log on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Application"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
 
+		Write-Verbose "Collecting System Log on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "System"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_system_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Powershell Log on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Windows PowerShell"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Microsoft-Windows-Windows Defender/Operational on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_defender_operational_$i`.csv -NoTypeInformation
+		
+		Write-Verbose "Collecting Microsoft-Windows-AppLocker/EXE and DLL on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/EXE and DLL'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_exedll_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Microsoft-Windows-AppLocker/MSI and Script on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/MSI and Script'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_msiscript_$i`.csv -NoTypeInformation
+		
+		Write-Verbose "Collecting Microsoft-Windows-AppLocker/Packaged app-Execution on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/Packaged app-Execution'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_packaged_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Microsoft-Windows-DeviceGuard/Operational on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-DeviceGuard/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_deviceguard_operational_$i`.csv -NoTypeInformation
+		
+		Write-Verbose "Collecting Microsoft-Windows-PowerShell/Operational on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-PowerShell/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_operational_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Microsoft-Windows-Windows Firewall With Advanced Security/Firewall on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_firewall_$i`.csv -NoTypeInformation
+
+		Write-Verbose "Collecting Microsoft-Windows-Sysmon/Operational on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_sysmon_operational_$i`.csv -NoTypeInformation
+		
+		Write-Verbose "Collecting Security Log on $i"
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Security"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
+	}
 }
 
 
