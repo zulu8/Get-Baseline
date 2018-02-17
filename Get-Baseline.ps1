@@ -93,7 +93,7 @@ function Get-Baseline {
 		continue
 	}
 	
-	# All Parallel Commands
+	# Begin Collection
 	if (-Not $SkipAuditConfig) {	
 		Write-Verbose "Getting Audit Levels"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock {& auditpol /get /category:* /r | Convertfrom-Csv} -ThrottleLimit 5 | Export-Csv ./Baseline/auditpol.csv -NoTypeInformation
@@ -434,14 +434,14 @@ function Get-BetterTasklist {
 			if ($_.ExecutablePath -ne $null -AND -NOT $NoHash) {
 				$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 				$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($_.ExecutablePath)))
-				$_ | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+				$_ | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 			} else {
-				$_ | Add-Member -MemberType NoteProperty Hash $null
+				$_ | Add-Member -MemberType NoteProperty SHA_1 $null
 			}
 			$_ | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 			$_
 		}
-	$betterPsList | Select TimeGenerated,Name,ProcessID,ParentProcessId,ExecutablePath,Hash,CommandLine
+	$betterPsList | Select TimeGenerated,Name,ProcessID,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }
 
 function Get-DLLs {
@@ -452,15 +452,15 @@ function Get-DLLs {
 		if ($_.FileName -ne $null -AND -NOT $NoHash) {
 			$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 			$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($_.FileName)))
-			$_ | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+			$_ | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 		}
 		else {
-			$_ | Add-Member -MemberType NoteProperty Hash $null
+			$_ | Add-Member -MemberType NoteProperty SHA_1 $null
 		}
 		$_ | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$_
 	}
-	$results | select TimeGenerated,ModuleName,FileName,Hash,Size,Company,Description,FileVersion,Product,ProductVersion 
+	$results | select TimeGenerated,ModuleName,FileName,SHA_1,Size,Company,Description,FileVersion,Product,ProductVersion 
 }
 
 function Get-BetterNetstatTCP {
@@ -491,16 +491,16 @@ function Get-BetterNetstatTCP {
 		if ($currentLineObj.ExecutablePath -ne $null -AND -NOT $NoHash) {
 			$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 			$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 		}
 		else {
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $null
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $null
 		}
 		$currentLineObj | Add-Member -MemberType NoteProperty CommandLine $proc.CommandLine
 		$currentLineObj | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$currentLineObj
 	}
-	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,ForeignAddressIP,ForeignAddressPort,State,Name,ProcessId,ParentProcessId,ExecutablePath,Hash,CommandLine
+	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,ForeignAddressIP,ForeignAddressPort,State,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }
 		
 	
@@ -530,16 +530,16 @@ function Get-BetterNetstatTCPv6 {
 		if ($currentLineObj.ExecutablePath -ne $null -AND -NOT $NoHash) {
 			$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 			$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 		}
 		else {
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $null
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $null
 		}
 		$currentLineObj | Add-Member -MemberType NoteProperty CommandLine $proc.CommandLine
 		$currentLineObj | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$currentLineObj
 	}
-	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,ForeignAddress,State,Name,ProcessId,ParentProcessId,ExecutablePath,Hash,CommandLine 
+	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,ForeignAddress,State,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine 
 }
 
 
@@ -571,16 +571,16 @@ function Get-BetterNetstatUDP {
 		if ($currentLineObj.ExecutablePath -ne $null -AND -NOT $NoHash -AND $proc.Caption -ne "dns.exe") {
 			$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 			$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 		}
 		else {
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $null
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $null
 		}
 		$currentLineObj | Add-Member -MemberType NoteProperty CommandLine $proc.CommandLine
 		$currentLineObj | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$currentLineObj
 	}
-	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,Name,ProcessId,ParentProcessId,ExecutablePath,Hash,CommandLine
+	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }	
 
 function Get-BetterNetstatUDPv6 {
@@ -608,16 +608,16 @@ function Get-BetterNetstatUDPv6 {
 		if ($currentLineObj.ExecutablePath -ne $null -AND -NOT $NoHash) {
 			$sha1 = New-Object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
 			$hash = [System.BitConverter]::ToString($sha1.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $($hash -replace "-","")
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $($hash -replace "-","")
 		}
 		else {
-			$currentLineObj | Add-Member -MemberType NoteProperty Hash $null
+			$currentLineObj | Add-Member -MemberType NoteProperty SHA_1 $null
 		}
 		$currentLineObj | Add-Member -MemberType NoteProperty CommandLine $proc.CommandLine
 		$currentLineObj | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$currentLineObj
 	}
-	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,Name,ProcessId,ParentProcessId,ExecutablePath,Hash,CommandLine
+	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }
 
 function Invoke-Autorunsc {
@@ -632,7 +632,7 @@ function Invoke-Autorunsc {
 	$results
 }
 
-
+# Ref: Matt Graeber https://specterops.io/assets/resources/SpecterOps_Subverting_Trust_in_Windows.pdf
 function Invoke-Sigcheck {
 	[cmdletbinding()]
 	Param([String] $url)	
@@ -664,7 +664,7 @@ function Invoke-Sigcheck {
 	Remove-Item $path
 }
 
-
+# Check for 
 function Get-AuditOptions {
 $regConfig = @"
 regKey,name
@@ -675,7 +675,11 @@ regKey,name
 "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging","EnableScriptBlockLogging"
 "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging","EnableModuleLogging"
 "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager",1
+"HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest","UseLogonCredential"
+"HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\Credssp\PolicyDefaults","Allow*"
+"HKLM:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation","Allow*"
 "@
+
 
 
 $regConfig | ConvertFrom-Csv | ForEach-Object {
