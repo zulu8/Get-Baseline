@@ -2,11 +2,11 @@ function Get-Baseline {
 	<#
 	.SYNOPSIS
 	This script is used to get useful baseline information from windows systems in scope.
-	It is designed for the Incident Response scenario. It primarily relies on PowerShell 
+	It is designed for the Incident Response scenario. It primarily relies on PowerShell
 	Remoting and can enable PSRemoting over SMB or WMI if necessary.
 	Function: Get-Baseline
 	Author: Jake Van Duyne
-	Required Dependencies: 
+	Required Dependencies:
 		-Sysinternals Suite served via http. Update $url variable
 		-List hostnames of target systems in Targets array
 		-Targets have remote administration enabled - PSRemoting, SMB, or WMI
@@ -52,24 +52,11 @@ function Get-Baseline {
 	[Switch]$SkipEventLogSettings,
 	[Switch]$SkipRemoteEnable,
 	[Switch]$SkipEventLogData)
-	
+
 	$VerbosePreference = "Continue"
-	
-	Start-Transcript -Path ".\Log_$(get-date -UFormat "%Y%m%d").txt" -Append
 
 	New-Item ./Baseline -type directory -force -EA SilentlyContinue
 
-	# Check All Mandatory Variables and Dependencies
-	# Test Sysinternals Suite HTTP Server "url" variable
-	$urlp = $url + "PsExec.exe"
-	$path = (Get-Location).Path + "\PsExec.exe"
-	(New-Object Net.WebClient).DownloadFile($urlp, $path)
-	if ( -Not (Test-Path .\PsExec.exe)) {
-		Write-Warning "There is something wrong with the -url variable!"
-		Stop-Transcript
-		continue
-	}
-	
 	# Test local PSVersion (must be greater than 4.0)
 	if ( $PSVersionTable.PSVersion.Major -lt 4 ) {
 		Write-Warning "The system running this script must have a PSVersion of 4.0 or greater"
@@ -77,10 +64,10 @@ function Get-Baseline {
 		Stop-Transcript
 		continue
 	}
-	
+
 
 	# Check Targets for Remote Access and Enable.
-	if (-Not $SkipRemoteEnable) {	
+	if (-Not $SkipRemoteEnable) {
 		$PSTargets = @()
 		$PSTargets = Enable-RemoteAccess -Targets $Targets
 	} else {
@@ -92,69 +79,85 @@ function Get-Baseline {
 	if (($ExecuteConfirmation -eq "n") -OR ($ExecuteConfirmation -eq "N")) {
 		continue
 	}
-	
+
 	# Begin Collection
-	if (-Not $SkipAuditConfig) {	
+	if (-Not $SkipAuditConfig) {
 		Write-Verbose "Getting Audit Levels"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock {& auditpol /get /category:* /r | Convertfrom-Csv} -ThrottleLimit 5 | Export-Csv ./Baseline/auditpol.csv -NoTypeInformation
-		
+
 		Write-Verbose "Getting Additional Audit Options"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-AuditOptions} -ThrottleLimit 5 | Export-Csv ./Baseline/auditoptions.csv -NoTypeInformation
 	}
-	
+
 	if (-Not $SkipSystemInfo) {
 		Write-Verbose "Getting System Information"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock {& systeminfo /FO CSV | Convertfrom-Csv} | Export-Csv ./Baseline/systeminfo.csv -NoTypeInformation
 	}
-	
+
 	if (-Not $SkipTasklist) {
 		Write-Verbose "Getting Better Tasklist"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-BetterTasklist} -ArgumentList $NoHash | Export-Csv ./Baseline/tasklist.csv -NoTypeInformation
 	}
-	
+
 	if (-Not $SkipDLLs) {
 		Write-Verbose "Getting Loaded DLLs"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-DLLs} -ArgumentList $NoHash | Export-Csv ./Baseline/dlls.csv -NoTypeInformation
 	}
-	
+
 	if (-Not $SkipNetstat) {
 		Write-Verbose "Getting Better TCP Netstat"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-BetterNetstatTCP} -ArgumentList $NoHash | Export-Csv ./Baseline/netstat_TCP.csv -NoTypeInformation
-	
+
 		Write-Verbose "Getting Better TCPv6 Netstat"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-BetterNetstatTCPv6} -ArgumentList $NoHash | Export-Csv ./Baseline/netstat_TCPv6.csv -NoTypeInformation
 
 		Write-Verbose "Getting Better UDP Netstat"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-BetterNetstatUDP} -ArgumentList $NoHash | Export-Csv ./Baseline/netstat_UDP.csv -NoTypeInformation
-		
+
 		Write-Verbose "Getting Better UDPv6 Netstat"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Get-BetterNetstatUDPv6} -ArgumentList $NoHash | Export-Csv ./Baseline/netstat_UDPv6.csv -NoTypeInformation
 	}
-	
-	
+
+
 	if (-Not $SkipAutoruns) {
 		Write-Verbose "Getting Autorunsc Data"
+
+		Invoke-Command -ComputerName $PSTargets -ScriptBlock {New-Item -path C:\blue_temp\ -ItemType directory -force}
+
+		foreach ($i in $PSTargets) {
+			if (Test-Path \\$i\c$\blue_temp\) {
+				Copy-Item .\autorunsc.exe \\$i\c$\blue_temp\ -Verbose
+			} else {
+				Write-Verbose "Error creating remote directory!"
+			}
+		}
+
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Invoke-Autorunsc} -ArgumentList $url | Export-Csv ./Baseline/autorunsc.csv -NoTypeInformation
+
+		foreach ($i in $PSTargets) {
+			if (Test-Path \\$i\c$\blue_temp\autorunsc.exe) {
+				Write-Verbose "Error removing remote files!"
+			}
+		}
 	}
-	
-	
+
+
 	if (-Not $SkipSigcheck) {
 		Write-Verbose "Checking System32 and SysWOW64 for unsigned binaries"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock ${Function:Invoke-Sigcheck} -ArgumentList $url | Export-Csv ./Baseline/sigcheck.csv -NoTypeInformation
 	}
-	
-	
+
+
 	if (-Not $SkipEventLogSettings) {
 		Write-Verbose "Getting Event Log Settings"
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock {Get-EventLog -list | Select LogDisplayName,Log,MachineName,MaximumKilobytes,OverflowAction,MinimumRetentionDays,EnableRaisingEvent,SynchronizingObject,Source,Site,Container
 		} | Export-Csv ./Baseline/eventloglist.csv -NoTypeInformation
 	}
-	
-	if (-Not $SkipEventLogData) {	
+
+	if (-Not $SkipEventLogData) {
 		Get-HuntData -Targets $PSTargets
-	} 
-	
-	Stop-Transcript
+	}
+
 }
 
 
@@ -163,7 +166,7 @@ function Get-HuntData {
 	.SYNOPSIS
 	This script queries remote systems for windows event logs.
 	Function: Get-HuntData
-	Author: 
+	Author:
 	Required Dependencies: PSRemoting
 	Optional Dependencies: None
 	Version: 1.0
@@ -181,15 +184,15 @@ function Get-HuntData {
 	#>
 	[cmdletbinding()]
 	Param([String[]]$Targets)
-	
+
 	$VerbosePreference = "Continue"
 
 	New-Item ./EventLogData -type directory -force
-	
+
 	foreach ($i in $Targets) {
-		
+
 		New-Item ./EventLogData/$i -type directory -force
-		
+
 		Write-Verbose "Collecting Application Log on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Application"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
 
@@ -201,19 +204,19 @@ function Get-HuntData {
 
 		Write-Verbose "Collecting Microsoft-Windows-Windows Defender/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_defender_operational_$i`.csv -NoTypeInformation
-		
+
 		Write-Verbose "Collecting Microsoft-Windows-AppLocker/EXE and DLL on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/EXE and DLL'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_exedll_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Microsoft-Windows-AppLocker/MSI and Script on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/MSI and Script'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_msiscript_$i`.csv -NoTypeInformation
-		
+
 		Write-Verbose "Collecting Microsoft-Windows-AppLocker/Packaged app-Execution on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-AppLocker/Packaged app-Execution'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_applocker_packaged_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Microsoft-Windows-DeviceGuard/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-DeviceGuard/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_deviceguard_operational_$i`.csv -NoTypeInformation
-		
+
 		Write-Verbose "Collecting Microsoft-Windows-PowerShell/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-PowerShell/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_operational_$i`.csv -NoTypeInformation
 
@@ -222,7 +225,7 @@ function Get-HuntData {
 
 		Write-Verbose "Collecting Microsoft-Windows-Sysmon/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_sysmon_operational_$i`.csv -NoTypeInformation
-		
+
 		Write-Verbose "Collecting Security Log on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Security"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
 	}
@@ -232,12 +235,12 @@ function Get-HuntData {
 function Enable-RemoteAccess {
 	[cmdletbinding()]
 	Param([String[]] $Targets)
-	
+
 	$VerbosePreference = "Continue"
-	
+
 	$SMBConfirmation = Read-Host "`n`nIf WinRM/PSRemoting is DISABLED, attempt to ENABLE with PsExec? [y/n]"
 	$WMIConfirmation = Read-Host "`nIf WinRM/PSRemoting and SMB is DISABLED, attempt to ENABLE with WMI? [y/n]"
-	
+
 	$PSTargets = @()
 	$SMBTargets = @()
 	$WMITargets = @()
@@ -246,7 +249,7 @@ function Enable-RemoteAccess {
 	$SMBFailedTargets = @()
 	$WMIChangedTargets = @()
 	$WMIFailedTargets = @()
-	
+
 
 	foreach ($i in $Targets) {
 		Write-Verbose "Testing Remote Management Options for $i"
@@ -264,7 +267,7 @@ function Enable-RemoteAccess {
 			$NoRemoteTargets += $i
 		}
 	}
-	
+
 	Write-Host "`n========================================================================"
 	Write-Host "Pre-Execution Report"
 	Write-Host "`nPowerShell Remoting Targets:"
@@ -276,19 +279,19 @@ function Enable-RemoteAccess {
 	Write-Host "`nTargets with NO REMOTING Options:"
 	Write-Host $NoRemoteTargets
 	Write-Host "`n========================================================================`n"
-	
+
 	if (($SMBConfirmation -eq "y") -OR ($SMBConfirmation -eq "Y")) {
 		Write-Host "You have elected to enable PSRemoting via PsExec."
 	} else {
-		Write-Host "You have elected NOT to enable PSRemoting via PsExec."		
+		Write-Host "You have elected NOT to enable PSRemoting via PsExec."
 	}
 	if (($WMIConfirmation -eq "y") -OR ($WMIConfirmation -eq "Y")) {
 		Write-Host "You have elected to enable PSRemoting via WMI."
 	} else {
-		Write-Host "You have elected NOT to enable PSRemoting via WMI."		
+		Write-Host "You have elected NOT to enable PSRemoting via WMI."
 	}
 	$ExecuteConfirmation = Read-Host "`nAre you sure you want to execute? [y/n]"
-	
+
 	if (($ExecuteConfirmation -eq "y") -OR ($ExecuteConfirmation -eq "Y")) {
 		if (($SMBConfirmation -eq "y") -OR ($SMBConfirmation -eq "Y")) {
 			Write-Verbose "Executing PsExec..."
@@ -298,16 +301,16 @@ function Enable-RemoteAccess {
 			}
 			# Enable WinRM via PsExec
 			$SMBChangedTargets = Enable-WinRMPsExec -SMBTargets $SMBTargets
-			
+
 			#Write-Verbose "`n`nValue of SMBChangedTargets: $SMBChangedTargets"
-			
+
 			# Determine which systems failed enabling PSRemoting via PsExec and store in variable SMBFailedTargets
 			if ($SMBChangedTargets -ne $null) {
 				$SMBFailedTargets = Compare-Object -ReferenceObject $SMBChangedTargets -DifferenceObject $SMBTargets -PassThru
 			} else {
 				$SMBFailedTargets = $SMBTargets
 			}
-			
+
 			# If PsExec fails on systems and WMI is allowed by user, Attempt enable via WMI
 			if (($SMBFailedTargets -ne $null) -AND (($WMIConfirmation -eq "y") -OR ($WMIConfirmation -eq "Y")) ) {
 				Write-Verbose "Adding SMB Failed Targets to WMI Targets..."
@@ -317,9 +320,9 @@ function Enable-RemoteAccess {
 		if (($WMIConfirmation -eq "y") -OR ($WMIConfirmation -eq "Y")) {
 			Write-Verbose "Executing WMI..."
 			$WMIChangedTargets += Enable-WinRMWMI -WMITargets $WMITargets
-			
+
 			#Write-Verbose "`n`nValue of WMIChangedTargets: $WMIChangedTargets"
-			
+
 			# Determine which systems failed enabling PSRemoting via PsExec and store in variable WMIFailedTargets
 			if ($WMIChangedTargets -ne $null) {
 				$WMIFailedTargets = Compare-Object -ReferenceObject $WMIChangedTargets -DifferenceObject $WMITargets -PassThru
@@ -331,7 +334,7 @@ function Enable-RemoteAccess {
 		Write-Verbose "Exiting..."
 		continue
 	}
-	
+
 	Write-Host "`n========================================================================"
 	Write-Host "Post-Execution Report"
 	Write-Host "`nPowerShell Remoting Targets:"
@@ -351,7 +354,7 @@ function Enable-RemoteAccess {
 	Write-Host "`n`nFINAL Targets ready for PSRemoting:"
 	Write-Host $PSTargets
 	Write-Host "========================================================================`n"
-	
+
 	return $PSTargets
 }
 
@@ -359,12 +362,12 @@ function Enable-WinRMPsExec {
 	[cmdletbinding()]
 	Param([String[]] $SMBTargets)
 	$ChangedTargets = @()
-	
+
 	if ( -Not (Test-Path .\PsExec.exe)) {
 		Write-Warning "You must have PsExec.exe in the current working directory to run this function!"
 		continue
 	}
-	
+
 	foreach ($i in $SMBTargets) {
 		# Enable WinRM over PsExec
 		Write-Verbose "Executing winrm quickconfig -q on $i with PsExec"
@@ -384,7 +387,7 @@ function Enable-WinRMWMI {
 	[cmdletbinding()]
 	Param([String[]] $WMITargets)
 	$ChangedTargets = @()
-	
+
 	foreach ($i in $WMITargets) {
 		# Enable WinRM over WMI
 		Write-Verbose "Executing winrm quickconfig -q on $i with WMI"
@@ -404,14 +407,14 @@ function Enable-WinRMWMI {
 function Disable-WinRM {
 	[cmdletbinding()]
 	Param([String[]] $Targets)
-	
+
 	$VerbosePreference = "Continue"
-	
+
 	if ( -Not (Test-Path .\PsExec.exe)) {
 		Write-Warning "You must have PsExec.exe in the current working directory to run this function!"
 		Exit
 	}
-	
+
 	foreach ($i in $Targets)
 	{
 		# Disable WinRM over PsExec
@@ -460,7 +463,7 @@ function Get-DLLs {
 		$_ | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$_
 	}
-	$results | select TimeGenerated,ModuleName,FileName,SHA_1,Size,Company,Description,FileVersion,Product,ProductVersion 
+	$results | select TimeGenerated,ModuleName,FileName,SHA_1,Size,Company,Description,FileVersion,Product,ProductVersion
 }
 
 function Get-BetterNetstatTCP {
@@ -502,14 +505,14 @@ function Get-BetterNetstatTCP {
 	}
 	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,ForeignAddressIP,ForeignAddressPort,State,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }
-		
-	
+
+
 function Get-BetterNetstatTCPv6 {
 	[cmdletbinding()]
 	Param([bool] $NoHash = $false)
 	$TimeGenerated = get-date -format r
 
-	# TCPv6 
+	# TCPv6
 	$data = netstat -nao -p TCPv6
 	$betterNetstat = Foreach ($line in $data[4..$data.count])
 	{
@@ -539,7 +542,7 @@ function Get-BetterNetstatTCPv6 {
 		$currentLineObj | Add-Member -MemberType NoteProperty TimeGenerated $TimeGenerated
 		$currentLineObj
 	}
-	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,ForeignAddress,State,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine 
+	$betterNetstat | select TimeGenerated,Protocol,LocalAddress,ForeignAddress,State,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
 }
 
 
@@ -581,7 +584,7 @@ function Get-BetterNetstatUDP {
 		$currentLineObj
 	}
 	$betterNetstat | select TimeGenerated,Protocol,LocalAddressIP,LocalAddressPort,Name,ProcessId,ParentProcessId,ExecutablePath,SHA_1,CommandLine
-}	
+}
 
 function Get-BetterNetstatUDPv6 {
 	[cmdletbinding()]
@@ -622,25 +625,26 @@ function Get-BetterNetstatUDPv6 {
 
 function Invoke-Autorunsc {
 	[cmdletbinding()]
-	Param([String] $url)	
+	Param([String] $url)
 	# python -m SimpleHTTPServer 8080
-	$urla = $url + "autorunsc.exe"
-	$path = "C:\autorunsc.exe"
-	(New-Object Net.WebClient).DownloadFile($urla, $path)
+	#$urla = $url + "autorunsc.exe"
+	$path = "C:\blue_temp\autorunsc.exe"
+	#(New-Object Net.WebClient).DownloadFile($urla, $path)
 	$results = & $path -accepteula -h -c -nobanner -a * -s | ConvertFrom-Csv
 	Remove-Item $path
+	Remove-Item C:\blue_temp
 	$results
 }
 
 # Ref: Matt Graeber https://specterops.io/assets/resources/SpecterOps_Subverting_Trust_in_Windows.pdf
 function Invoke-Sigcheck {
 	[cmdletbinding()]
-	Param([String] $url)	
-	
+	Param([String] $url)
+
 	$verifyHashFunc = 'HKLM:\SOFTWARE\Microsoft\Cryptography\OID\EncodingType 0\CryptSIPDllVerifyIndirectData'
 	$PowerShellSIPGuid = '{603BCC1F-4B59-4E08-B724-D2C6297EF351}'
 	$PESIDPGuid = '{C689AAB8-8E78-11D0-8C47-00C04FC295EE}'
-	
+
 	if ((Get-ItemProperty -Path "$verifyHashFunc\$PowerShellSIPGuid\" -Name "FuncName").FuncName -ne "PsVerifyHash") {
 		Write-Error "The System Signature Trust is Subverted!!!"
 		Exit
@@ -654,7 +658,7 @@ function Invoke-Sigcheck {
 		Write-Error "The System Signature Trust is Subverted!!!"
 		Exit
 	}
-	
+
 	$urls = $url + "sigcheck.exe"
 	$path = "C:\sigcheck.exe"
 	(New-Object Net.WebClient).DownloadFile($urls, $path)
@@ -664,7 +668,7 @@ function Invoke-Sigcheck {
 	Remove-Item $path
 }
 
-# Check for 
+# Check for
 function Get-AuditOptions {
 $regConfig = @"
 regKey,name
