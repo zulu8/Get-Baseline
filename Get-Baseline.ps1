@@ -27,13 +27,14 @@ function Get-Baseline {
 	Bool: Set to $true to skip the hashing function for executables and dlls. Default: $false
 	.PARAMETER Targets
 	String[]: Comma separated list of hostnames to execute script on.
-	Can also be $(get-content <IP_list_file.txt)
+	Can also be $(get-content <IP_list_file>.txt)
 	.PARAMETER url
 	String: Provide the URL of the Sysinternals Suite http server.
 	.EXAMPLE
 	PS> Get-Baseline -Targets dc01,srv01,pc02win10 -url "http://10.0.0.133:8080/" -SkipSigcheck
 	PS> Get-Baseline -Targets dc01 -url "http://10.0.0.133:8080/" -SkipSigcheck
-
+	PS> Get-Baseline -Targets $(get-content lab.txt) -SkipSigcheck
+	PS> Get-Baseline -Targets dc02,srv01win2012r2,srv02win2012r2,srv03win2016,pc01win10,pc02win10,srv04win2008 -SkipSigcheck
 	.EXAMPLE
 	PS> Get-Baseline -Targets $(get-content hostname_list.txt) -url "http://10.0.0.128:8080/" -SkipSigcheck
 	.LINK
@@ -194,13 +195,13 @@ function Get-HuntData {
 		New-Item ./EventLogData/$i -type directory -force
 
 		Write-Verbose "Collecting Application Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Application"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Application"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting System Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "System"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_system_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "System"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_system_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Powershell Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Windows PowerShell"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Windows PowerShell"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Microsoft-Windows-Windows Defender/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_defender_operational_$i`.csv -NoTypeInformation
@@ -227,7 +228,7 @@ function Get-HuntData {
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_sysmon_operational_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Security Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-EventLog -LogName "Security"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Security"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
 	}
 }
 
