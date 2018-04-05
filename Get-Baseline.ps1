@@ -154,6 +154,14 @@ function Get-Baseline {
 		Invoke-Command -ComputerName $PSTargets -ScriptBlock {Get-EventLog -list | Select LogDisplayName,Log,MachineName,MaximumKilobytes,OverflowAction,MinimumRetentionDays,EnableRaisingEvent,SynchronizingObject,Source,Site,Container
 		} | Export-Csv ./Baseline/eventloglist.csv -NoTypeInformation
 	}
+	
+	Write-Verbose "Getting Windows Defender Detections"
+	Invoke-Command -ComputerName $PSTargets -ScriptBlock {Get-MpThreat} | Export-Csv ./Baseline/MpThreat.csv -NoTypeInformation
+	Invoke-Command -ComputerName $PSTargets -ScriptBlock {Get-MpThreatDetection} | Export-Csv ./Baseline/MpThreatDetection.csv -NoTypeInformation
+
+	Write-Verbose "Getting Windows PowerShell History"
+	
+	Invoke-Command -ComputerName $PSTargets -ScriptBlock {gc $((Get-PSReadlineOption).HistorySavePath)} | Export-Csv ./Baseline/PowerShellHistory.csv -NoTypeInformation
 
 	if (-Not $SkipEventLogData) {
 		Get-HuntData -Targets $PSTargets
@@ -195,13 +203,13 @@ function Get-HuntData {
 		New-Item ./EventLogData/$i -type directory -force
 
 		Write-Verbose "Collecting Application Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Application"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WmiObject -class Win32_NTLogEvent -filter "(logfile='Application')" } | Export-Csv ./EventLogData/$i/eventlog_application_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting System Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "System"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_system_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WmiObject -class Win32_NTLogEvent -filter "(logfile='System')" } | Export-Csv ./EventLogData/$i/eventlog_system_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Powershell Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Windows PowerShell"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_powershell_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WmiObject -class Win32_NTLogEvent -filter "(logfile='Windows PowerShell')" } | Export-Csv ./EventLogData/$i/eventlog_powershell_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Microsoft-Windows-Windows Defender/Operational on $i"
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational'} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_defender_operational_$i`.csv -NoTypeInformation
@@ -228,7 +236,7 @@ function Get-HuntData {
 		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_sysmon_operational_$i`.csv -NoTypeInformation
 
 		Write-Verbose "Collecting Security Log on $i"
-		Invoke-Command -ComputerName $i -ScriptBlock {Get-WinEvent -LogName "Security"} -EA SilentlyContinue | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
+		Invoke-Command -ComputerName $i -ScriptBlock {Get-WmiObject -class Win32_NTLogEvent -filter "(logfile='Security')"}  | Export-Csv ./EventLogData/$i/eventlog_security_$i`.csv -NoTypeInformation
 	}
 }
 
@@ -631,7 +639,7 @@ function Invoke-Autorunsc {
 	#$urla = $url + "autorunsc.exe"
 	$path = "C:\blue_temp\autorunsc.exe"
 	#(New-Object Net.WebClient).DownloadFile($urla, $path)
-	$results = & $path -accepteula -h -c -nobanner -a * -s | ConvertFrom-Csv
+	$results = & $path -accepteula -h -c -nobanner -a * -s -t | ConvertFrom-Csv
 	Remove-Item $path
 	Remove-Item C:\blue_temp
 	$results
